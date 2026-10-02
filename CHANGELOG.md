@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) render document thumbnails through the WOPI client
+- ✨(frontend) show item thumbnails in the right panel
 
 ## [v1.1.1] - 2026-11-23
 
