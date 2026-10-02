@@ -12,6 +12,7 @@ and this project adheres to
 
 - ✨(backend) rate limit the item creation endpoints
 - ✨(backend) render document thumbnails through the WOPI client
+- ✨(frontend) show item thumbnails in the right panel
 
 ### Changed
 

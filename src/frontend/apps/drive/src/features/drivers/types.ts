@@ -82,6 +82,7 @@ export type Item = {
   path: string;
   url?: string;
   url_preview?: string;
+  url_thumbnail?: string;
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
