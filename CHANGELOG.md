@@ -11,6 +11,7 @@ and this project adheres to
 ### Added
 
 - ✨(backend) rate limit the item creation endpoints
+- ✨(backend) render document thumbnails through the WOPI client
 
 ### Changed
 

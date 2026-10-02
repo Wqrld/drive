@@ -1882,7 +1882,11 @@ class ItemViewSet(
             logger.debug("Item '%s' is not ready", item.id)
             raise drf.exceptions.PermissionDenied()
 
-        if url_params.get("preview") and not utils.is_previewable_item(item):
+        if (
+            url_params.get("preview")
+            and url_params.get("key") != item.thumbnail_key
+            and not utils.is_previewable_item(item)
+        ):
             logger.debug("Item '%s' is not previewable", item.id)
             raise drf.exceptions.PermissionDenied()
 

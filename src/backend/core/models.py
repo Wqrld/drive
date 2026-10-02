@@ -1193,6 +1193,11 @@ class Item(TreeModel, BaseModel):
         return f"{self.key_base}/{self.filename}"
 
     @property
+    def thumbnail_key(self):
+        """Key used to store the rendered thumbnail, in a folder no filename can clash with."""
+        return f"{self.key_base}/thumbnail/thumbnail.png"
+
+    @property
     def depth(self):
         """Return the depth of the item in the tree."""
         return len(self.path)

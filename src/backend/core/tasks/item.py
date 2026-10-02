@@ -62,11 +62,12 @@ def process_item_purge(item_id):
     # Get descendants, leaf first. Don't burst memory
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
         if item.type == ItemTypeChoices.FILE and item.file_key:
-            try:
-                default_storage.delete(item.file_key)
-            except FileNotFoundError:
-                # File already absent from storage: ignore and continue
-                pass
+            for key in (item.file_key, item.thumbnail_key):
+                try:
+                    default_storage.delete(key)
+                except FileNotFoundError:
+                    # File already absent from storage: ignore and continue
+                    pass
 
             # Drop any malware detection record so the analysis is not relaunched
             MalwareDetection.objects.filter(path=item.file_key).delete()

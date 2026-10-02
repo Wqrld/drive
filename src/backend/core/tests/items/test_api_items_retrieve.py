@@ -61,6 +61,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -120,6 +121,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -226,6 +228,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -291,6 +294,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -434,6 +438,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -503,6 +508,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -682,6 +688,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -759,6 +766,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -836,6 +844,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -1235,6 +1244,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1310,6 +1320,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": "application/vnd.oasis.opendocument.text",
         "main_workspace": False,
         "filename": item.filename,
@@ -1377,6 +1388,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "url_preview": (
             f"http://localhost:8083/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
         ),
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1523,6 +1535,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1568,3 +1581,38 @@ def test_api_items_retrieve_wopi_supported():
 
     assert response.status_code == 200
     assert response.json()["is_wopi_supported"] is True
+
+
+def test_api_items_retrieve_url_thumbnail(settings):
+    """WOPI supported files expose a thumbnail URL when a client can render thumbnails."""
+    settings.WOPI_CLIENTS = ["collabora"]
+    settings.WOPI_CLIENTS_CONFIGURATION = {
+        "collabora": {"options": {"ConvertServiceUrl": "http://collabora/cool/convert-to"}}
+    }
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {
+                "docx": {"url": "https://vendorA.com/launch_url", "client": "collabora"},
+            },
+        },
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        filename="report.docx",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["url_thumbnail"] == (
+        f"http://localhost:8083/media/preview/item/{item.id!s}/thumbnail/thumbnail.png"
+    )
+
+    settings.WOPI_CLIENTS_CONFIGURATION = {"collabora": {"options": {}}}
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.json()["url_thumbnail"] is None

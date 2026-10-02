@@ -97,6 +97,7 @@ def test_api_items_trashbin_format(settings):
         if item.type == models.ItemTypeChoices.FILE
         else None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,

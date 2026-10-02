@@ -1483,6 +1483,9 @@ class Base(Configuration):
     WOPI_ONLYOFFICE_CONVERT_JWT_SECRET = SecretFileValue(
         None, environ_name="WOPI_ONLYOFFICE_CONVERT_JWT_SECRET", environ_prefix=None
     )
+    WOPI_THUMBNAIL_SIZE = values.IntegerValue(
+        512, environ_name="WOPI_THUMBNAIL_SIZE", environ_prefix=None
+    )
     WOPI_DISABLE_CHAT = values.IntegerValue(
         0, environ_name="WOPI_DISABLE_CHAT", environ_prefix=None
     )

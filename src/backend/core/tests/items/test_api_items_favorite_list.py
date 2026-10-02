@@ -94,6 +94,7 @@ def test_api_item_favorite_list_authenticated_with_favorite():
                 if item.type == models.ItemTypeChoices.FILE
                 else None,
                 "url_preview": None,
+                "url_thumbnail": None,
                 "mimetype": None,
                 "user_role": "reader",
                 "main_workspace": False,

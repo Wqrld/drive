@@ -1,6 +1,6 @@
 """Client serializers for the drive core app."""
 
-# pylint: disable=no-name-in-module
+# pylint: disable=no-name-in-module,too-many-lines
 
 from __future__ import annotations
 
@@ -23,6 +23,7 @@ from core.api import utils
 from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
+from wopi.conversion.thumbnails import resolve_thumbnail_backend
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +275,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     url_permalink = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
+    url_thumbnail = serializers.SerializerMethodField()
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
@@ -308,6 +310,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -341,6 +344,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "mimetype",
             "main_workspace",
             "size",
@@ -421,6 +425,17 @@ class ListItemSerializer(serializers.ModelSerializer):
             return None
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
 
+    def get_url_thumbnail(self, item):
+        """Return the URL of the thumbnail rendered by the WOPI provider."""
+        if (
+            item.type != models.ItemTypeChoices.FILE
+            or item.upload_state != models.ItemUploadStateChoices.READY
+            or resolve_thumbnail_backend() is None
+            or not self.get_is_wopi_supported(item)
+        ):
+            return None
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{item.thumbnail_key}"
+
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""
         if item.deleted_at is None:
@@ -463,6 +478,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -489,6 +505,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "mimetype",
             "main_workspace",
             "size",
@@ -542,6 +559,7 @@ class ItemSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -574,6 +592,7 @@ class ItemSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",

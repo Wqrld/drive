@@ -399,3 +399,23 @@ def test_api_items_media_auth_filename_with_hash():
         timeout=1,
     )
     assert response.content.decode("utf-8") == "my prose"
+
+
+@pytest.mark.parametrize(
+    "key_suffix,status_code",
+    [("thumbnail/thumbnail.png", 200), ("report.docx", 403)],
+)
+def test_api_items_media_auth_preview_thumbnail(key_suffix, status_code):
+    """The thumbnail of a non-previewable file can be previewed, not the file itself."""
+    item = factories.ItemFactory(
+        link_reach="public",
+        type=models.ItemTypeChoices.FILE,
+        filename="report.docx",
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    original_url = f"http://localhost/media/preview/item/{item.pk!s}/{key_suffix:s}"
+    response = APIClient().get("/api/v1.0/items/media-auth/", HTTP_X_ORIGINAL_URL=original_url)
+
+    assert response.status_code == status_code

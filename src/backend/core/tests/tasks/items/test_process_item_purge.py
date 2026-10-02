@@ -90,12 +90,14 @@ def test_process_item_purge_item_file_is_ready():
     item.soft_delete()
     item.hard_delete()
     default_storage.save(item.file_key, BytesIO(b"my prose"))
+    default_storage.save(item.thumbnail_key, BytesIO(b"my thumbnail"))
     assert default_storage.exists(item.file_key)
 
     process_item_purge(item.id)
 
     assert not models.Item.objects.filter(id=item.id).exists()
     assert not default_storage.exists(item.file_key)
+    assert not default_storage.exists(item.thumbnail_key)
 
 
 def test_process_item_purge_item_folder_hard_deleted():

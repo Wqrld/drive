@@ -1,5 +1,6 @@
 """Service layer for server-to-server legacy file conversion."""
 
+from functools import partial
 from os.path import splitext
 
 from django.conf import settings
@@ -19,6 +20,7 @@ from wopi.conversion.exceptions import (
 )
 from wopi.conversion.policy import is_forced_conversion, target_extension_for
 from wopi.conversion.source_url import build_source_url
+from wopi.tasks.thumbnails import generate_item_thumbnail
 
 MIME_SNIFF_BYTES = 2048
 
@@ -151,6 +153,7 @@ def perform_conversion(source_item, placeholder, user):
         default_storage.delete(placeholder.file_key)
         raise
 
+    transaction.on_commit(partial(generate_item_thumbnail.delay, str(placeholder.id)))
     return placeholder
 
 
