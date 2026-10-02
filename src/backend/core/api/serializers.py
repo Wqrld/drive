@@ -275,6 +275,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     url = serializers.SerializerMethodField()
     url_permalink = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
+    url_thumbnail = serializers.SerializerMethodField()
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
@@ -313,6 +314,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -350,6 +352,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "mimetype",
             "main_workspace",
             "size",
@@ -432,6 +435,12 @@ class ListItemSerializer(serializers.ModelSerializer):
             return None
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
 
+    def get_url_thumbnail(self, item):
+        """Return the URL of the rendered thumbnail, if the item has one."""
+        if item.thumbnail_key is None or item.upload_state != models.ItemUploadStateChoices.READY:
+            return None
+        return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{item.thumbnail_key}"
+
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""
         if item.deleted_at is None:
@@ -495,6 +504,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -527,6 +537,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "mimetype",
             "main_workspace",
             "size",
@@ -584,6 +595,7 @@ class ItemSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",
@@ -620,6 +632,7 @@ class ItemSerializer(ListItemSerializer):
             "url",
             "url_permalink",
             "url_preview",
+            "url_thumbnail",
             "filename",
             "mimetype",
             "main_workspace",

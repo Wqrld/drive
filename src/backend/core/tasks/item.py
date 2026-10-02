@@ -17,6 +17,7 @@ from lasuite.malware_detection.models import MalwareDetection
 
 from core.api.utils import sanitize_filename
 from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
+from core.signals import item_file_ready
 
 from drive.celery_app import app
 
@@ -62,11 +63,16 @@ def process_item_purge(item_id):
     # Get descendants, leaf first. Don't burst memory
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
         if item.type == ItemTypeChoices.FILE and item.file_key:
-            try:
-                default_storage.delete(item.file_key)
-            except FileNotFoundError:
-                # File already absent from storage: ignore and continue
-                pass
+            # Every thumbnail, not only the current one: a render that lost against a
+            # newer one, or that finished after the deletion, may have left its own.
+            _dirs, thumbnails = default_storage.listdir(item.thumbnail_folder)
+            thumbnail_keys = [f"{item.thumbnail_folder}/{name}" for name in thumbnails]
+            for key in [item.file_key, *thumbnail_keys]:
+                try:
+                    default_storage.delete(key)
+                except FileNotFoundError:
+                    # File already absent from storage: ignore and continue
+                    pass
 
             # Drop any malware detection record so the analysis is not relaunched
             MalwareDetection.objects.filter(path=item.file_key).delete()
@@ -219,3 +225,4 @@ def duplicate_file(self, item_to_duplicate_id, duplicated_item_id):
 
     duplicated_item.upload_state = ItemUploadStateChoices.READY
     duplicated_item.save(update_fields=["upload_state", "updated_at"])
+    item_file_ready.send(sender=Item, item=duplicated_item)

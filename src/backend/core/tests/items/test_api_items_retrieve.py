@@ -4,7 +4,7 @@ Tests for items API endpoint in drive's core app: retrieve
 
 # pylint: disable=too-many-lines
 import random
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
@@ -63,6 +63,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -126,6 +127,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -236,6 +238,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -305,6 +308,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -452,6 +456,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -525,6 +530,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -708,6 +714,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -789,6 +796,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -870,6 +878,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "url": None,
         "url_permalink": None,
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -1295,6 +1304,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1374,6 +1384,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "url": f"http://localhost:8083/media/item/{item.id!s}/document.odt",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": None,
+        "url_thumbnail": None,
         "mimetype": "application/vnd.oasis.opendocument.text",
         "main_workspace": False,
         "filename": item.filename,
@@ -1445,6 +1456,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
         "url_preview": (
             f"http://localhost:8083/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
         ),
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1597,6 +1609,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "url": f"http://localhost:8083/media/item/{item.id!s}/logo.png",
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
+        "url_thumbnail": None,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1724,3 +1737,35 @@ def test_api_items_retrieve_has_link_password():
     assert response.status_code == 200
     assert response.json()["has_link_password"] is True
     assert "link_password" not in response.json()
+
+
+@pytest.mark.parametrize(
+    "upload_state,thumbnail_updated_at,expected",
+    [
+        (models.ItemUploadStateChoices.READY, None, None),
+        (
+            models.ItemUploadStateChoices.READY,
+            datetime(2026, 10, 3, 12, tzinfo=UTC),
+            "http://localhost:8083/media/preview/item/{id}/thumbnail/1791028800000.png",
+        ),
+        (
+            models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
+            datetime(2026, 10, 3, 12, tzinfo=UTC),
+            None,
+        ),
+    ],
+)
+def test_api_items_retrieve_url_thumbnail(upload_state, thumbnail_updated_at, expected):
+    """Only expose a thumbnail URL, versioned by its render time, when there is one."""
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        filename="report.docx",
+        update_upload_state=upload_state,
+        thumbnail_updated_at=thumbnail_updated_at,
+    )
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+
+    assert response.status_code == 200
+    assert response.json()["url_thumbnail"] == (expected and expected.format(id=item.id))

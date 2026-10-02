@@ -8,6 +8,10 @@ and this project adheres to
 
 ## [Unreleased]
 
+### Added
+
+- ✨(backend) render document thumbnails through the WOPI client
+
 ## [v1.1.1] - 2026-11-23
 
 ### Fixed

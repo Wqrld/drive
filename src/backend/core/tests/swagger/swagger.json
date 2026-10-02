@@ -2628,6 +2628,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "readOnly": true,
@@ -2714,6 +2718,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3051,6 +3056,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3138,6 +3147,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3285,6 +3295,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3367,6 +3381,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
@@ -3762,6 +3777,10 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "url_thumbnail": {
+                        "type": "string",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3857,6 +3876,7 @@
                     "url",
                     "url_permalink",
                     "url_preview",
+                    "url_thumbnail",
                     "user_role"
                 ]
             },
