@@ -202,11 +202,11 @@ def test_thumbnail_requests_first_page_png(settings):
     backend = OnlyOfficeConversionBackend(convert_service_url=CONVERT_URL)
     item = _item("report.docx")
     with mock.patch(
-        "wopi.conversion.backends.onlyoffice.build_source_url", return_value=SOURCE_URL
-    ) as build_source_url:
+        "wopi.conversion.backends.onlyoffice.build_system_source_url", return_value=SOURCE_URL
+    ) as build_system_source_url:
         thumbnail = backend.thumbnail(item, 256)
 
-    build_source_url.assert_called_once_with(item, item.creator)
+    build_system_source_url.assert_called_once_with(item)
     assert thumbnail.read() == b"png-bytes"
     payload = json.loads(responses.calls[0].request.body)
     assert payload["filetype"] == "docx"

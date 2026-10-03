@@ -62,7 +62,7 @@ def process_item_purge(item_id):
     # Get descendants, leaf first. Don't burst memory
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
         if item.type == ItemTypeChoices.FILE and item.file_key:
-            for key in (item.file_key, item.thumbnail_key):
+            for key in filter(None, (item.file_key, item.thumbnail_key)):
                 try:
                     default_storage.delete(key)
                 except FileNotFoundError:

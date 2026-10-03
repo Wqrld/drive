@@ -1046,6 +1046,11 @@ class Item(TreeModel, BaseModel):
         default=dict,
         help_text=_("Malware detection info when the analysis status is unsafe."),
     )
+    thumbnail_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=_("When the current thumbnail was rendered, null when there is none."),
+    )
 
     label_size = 7
 
@@ -1194,8 +1199,14 @@ class Item(TreeModel, BaseModel):
 
     @property
     def thumbnail_key(self):
-        """Key used to store the rendered thumbnail, in a folder no filename can clash with."""
-        return f"{self.key_base}/thumbnail/thumbnail.png"
+        """Key of the current thumbnail, or None when there is none.
+
+        The key is versioned by the render time so that browsers never serve a stale
+        thumbnail from their cache, and lives in a folder no filename can clash with.
+        """
+        if self.thumbnail_updated_at is None:
+            return None
+        return f"{self.key_base}/thumbnail/{int(self.thumbnail_updated_at.timestamp() * 1000)}.png"
 
     @property
     def depth(self):

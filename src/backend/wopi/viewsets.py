@@ -6,6 +6,7 @@ from datetime import timedelta
 from os.path import splitext
 
 from django.conf import settings
+from django.core import signing
 from django.core.exceptions import RequestDataTooBig
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -17,11 +18,13 @@ from lasuite.malware_detection import malware_detection
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from sentry_sdk import capture_exception
 
 from core.api.utils import get_item_file_head_object
-from core.models import Item
+from core.models import Item, ItemTypeChoices, ItemUploadStateChoices
 from wopi.authentication import WopiAccessTokenAuthentication, get_access_token
+from wopi.conversion.source_url import read_system_source_token
 from wopi.exceptions import WopiRequestSignatureError
 from wopi.permissions import AccessTokenPermission
 from wopi.services.lock import LockService
@@ -48,6 +51,26 @@ X_WOPI_LOCK = "X-WOPI-Lock"
 S3_VERSION_ID = "VersionId"
 
 ILLEGAL_FILENAME_CHARS = ("/", "\\")
+
+
+def stream_item_file(item, head_object):
+    """Stream the content of a file item from the object storage."""
+    s3_client = default_storage.connection.meta.client
+
+    file = s3_client.get_object(
+        Bucket=default_storage.bucket_name,
+        Key=item.file_key,
+    )
+
+    return StreamingHttpResponse(
+        streaming_content=file["Body"].iter_chunks(),
+        content_type=item.mimetype,
+        headers={
+            "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
+            "Content-Length": head_object["ContentLength"],
+        },
+        status=200,
+    )
 
 
 class WopiViewSet(viewsets.ViewSet):
@@ -193,22 +216,7 @@ class WopiViewSet(viewsets.ViewSet):
                 )
                 return Response(status=412)
 
-        s3_client = default_storage.connection.meta.client
-
-        file = s3_client.get_object(
-            Bucket=default_storage.bucket_name,
-            Key=item.file_key,
-        )
-
-        return StreamingHttpResponse(
-            streaming_content=file["Body"].iter_chunks(),
-            content_type=item.mimetype,
-            headers={
-                "X-WOPI-ItemVersion": get_wopi_item_version(head_object),
-                "Content-Length": head_object["ContentLength"],
-            },
-            status=200,
-        )
+        return stream_item_file(item, head_object)
 
     def _put_file_content(self, request, pk=None):
         """
@@ -491,3 +499,34 @@ class WopiViewSet(viewsets.ViewSet):
             )
 
         return Response(status=200)
+
+
+class SystemSourceView(APIView):
+    """
+    Serve the content of a ready file to a WOPI client running a background job.
+
+    Access is granted by a short-lived token signed for this item only, not by a user
+    session, see wopi.conversion.source_url.build_system_source_url.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request, pk):
+        """Stream the item content when the token is valid for it."""
+        try:
+            item_id = read_system_source_token(request.query_params.get("token", ""))
+        except signing.BadSignature:
+            return Response(status=403)
+        if item_id != str(pk):
+            return Response(status=403)
+
+        item = Item.objects.filter(
+            pk=pk,
+            type=ItemTypeChoices.FILE,
+            upload_state=ItemUploadStateChoices.READY,
+        ).first()
+        if item is None:
+            return Response(status=404)
+
+        return stream_item_file(item, get_item_file_head_object(item))
