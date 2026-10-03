@@ -157,6 +157,7 @@ export const AppExplorerGrid = () => {
     if (appExplorer.hasNextPage !== undefined && appExplorer.fetchNextPage) {
       return (
         <InfiniteScroll
+          className="explorer__grid__scroll"
           hasNextPage={appExplorer.hasNextPage}
           isFetchingNextPage={appExplorer.isFetchingNextPage || false}
           fetchNextPage={appExplorer.fetchNextPage}
