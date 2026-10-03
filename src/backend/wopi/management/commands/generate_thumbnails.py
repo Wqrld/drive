@@ -3,7 +3,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from core import models
-from wopi.conversion.thumbnails import resolve_thumbnail_backend
+from wopi.conversion.thumbnails import thumbnail_clients
 from wopi.tasks.thumbnails import generate_item_thumbnail
 
 
@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         """Handle the command."""
-        if resolve_thumbnail_backend() is None:
+        if not any(thumbnail_clients()):
             raise CommandError("No WOPI client defines a ThumbnailServiceUrl option.")
 
         items = models.Item.objects.filter(
