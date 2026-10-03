@@ -21,7 +21,8 @@ import { itemToPreviewFile } from "@/features/explorer/utils/utils";
 import { ConvertLegacyFileModal } from "@/features/explorer/components/modals/ConvertLegacyFileModal";
 
 /**
- * Wrapper around EmbeddedExplorerGrid to display a list of items in a table.
+ * Wrapper around EmbeddedExplorerGrid to display a list of items in a table
+ * or in a grid of cards.
  *
  * It provides:
  * - Runtime tree lazy loading support
@@ -148,6 +149,7 @@ export const AppExplorerGrid = () => {
         column1Config={appExplorer.column1Config}
         column2Config={appExplorer.column2Config}
         viewSortable={appExplorer.viewConfig.sortable}
+        viewMode={appExplorer.viewMode}
       />
     );
 

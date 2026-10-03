@@ -46,6 +46,8 @@ import { ColumnHeader } from "./headers/ColumnHeader";
 import { CustomizableColumnHeader } from "./headers/CustomizableColumnHeader";
 import { useTransientItemsPoller } from "../../hooks/useTransientItemsPoller";
 import { EmbeddedExplorerGridRow } from "./EmbeddedExplorerGridRow";
+import { EmbeddedExplorerGridCard } from "./EmbeddedExplorerGridCard";
+import { ViewMode } from "../../hooks/useViewMode";
 import posthog from "posthog-js";
 
 const POSTHOG_EVENT_COLUMN_TYPE_CHANGED = "column_type_changed";
@@ -64,6 +66,7 @@ export type EmbeddedExplorerGridProps = {
   canSelect?: (item: Item) => boolean;
   onFileClick?: (item: Item) => void;
   disableKeyboardNavigation?: boolean;
+  viewMode?: ViewMode;
   // Custom columns
   sortState?: SortState;
   onSort?: (columnId: "title" | ColumnType) => void;
@@ -177,10 +180,12 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     enableRowSelection: true,
   });
 
+  const isGridView = props.viewMode === "grid";
   const tableRef = useRef<HTMLTableElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
-    tableRef,
+    tableRef: isGridView ? cardsRef : tableRef,
     isDisabled: isActionModalOpen || props.disableKeyboardNavigation,
   });
 
@@ -298,14 +303,14 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const handleRowClick = useCallback(
-    (e: React.MouseEvent<HTMLTableRowElement>, row: Row<Item>) => {
+    (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => {
       if (TRANSIENT_UPLOAD_STATES.includes(row.original.upload_state)) {
         return;
       }
 
       // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
-      // So we check that the clicked element is indeed an element of the table.
-      if (!(e.target as HTMLElement).closest("tr")) {
+      // So we check that the clicked element is indeed an element of the table or of a card.
+      if (!(e.target as HTMLElement).closest("tr, .explorer__grid__card")) {
         return;
       }
 
@@ -350,7 +355,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const handleRowContextMenu = useCallback(
-    (e: React.MouseEvent<HTMLTableRowElement>, row: Row<Item>) => {
+    (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => {
       if (props.displayMode === "sdk") {
         return;
       }
@@ -389,80 +394,100 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       props via context, but it's quite overkill, unfortunatly we did not find a
       better solution. */}
       <EmbeddedExplorerGridContext.Provider value={contextValue}>
-        <div
-          className={clsx("c__datagrid__table__container", {
-            explorer__compact: props.isCompact,
-          })}
-        >
-          <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
-            <thead>
-              <tr>
-                {/* This one stands for the mobile column */}
-                <th></th>
-                <th className="explorer__grid__th--title">
-                  <ColumnHeader
-                    label={t("explorer.grid.name")}
-                    columnId="title"
-                    sortState={props.sortState ?? null}
-                    onSort={handleSortTitle}
-                    sortable={props.viewSortable !== false}
+        {isGridView ? (
+          <div
+            ref={cardsRef}
+            className="explorer__grid__cards"
+            tabIndex={0}
+            onKeyDown={onKeyDown}
+          >
+            {table.getRowModel().rows.map((row) => (
+              <EmbeddedExplorerGridCard
+                key={row.original.id}
+                row={row}
+                isOvered={!!overedItemIds[row.original.id]}
+                onClickRow={handleRowClick}
+                onContextMenuRow={handleRowContextMenu}
+                onOver={handleRowOver}
+              />
+            ))}
+          </div>
+        ) : (
+          <div
+            className={clsx("c__datagrid__table__container", {
+              explorer__compact: props.isCompact,
+            })}
+          >
+            <table ref={tableRef} tabIndex={0} onKeyDown={onKeyDown}>
+              <thead>
+                <tr>
+                  {/* This one stands for the mobile column */}
+                  <th></th>
+                  <th className="explorer__grid__th--title">
+                    <ColumnHeader
+                      label={t("explorer.grid.name")}
+                      columnId="title"
+                      sortState={props.sortState ?? null}
+                      onSort={handleSortTitle}
+                      sortable={props.viewSortable !== false}
+                    />
+                  </th>
+                  {!props.isCompact && (
+                    <>
+                      <th className="explorer__grid__th--info-col-1">
+                        {props.prefs && props.column1Config ? (
+                          <CustomizableColumnHeader
+                            slot="column1"
+                            currentType={props.prefs.column1}
+                            defaultType={DEFAULT_COLUMN_PREFERENCES.column1}
+                            sortState={props.sortState ?? null}
+                            onSort={handleSortColumn}
+                            onChangeColumn={handleChangeCol1}
+                            otherColumnType={props.prefs.column2}
+                            sortable={props.viewSortable !== false}
+                          />
+                        ) : (
+                          <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
+                            {t("explorer.grid.last_update")}
+                          </div>
+                        )}
+                      </th>
+                      <th className="explorer__grid__th--info-col-2">
+                        {props.prefs && props.column2Config ? (
+                          <CustomizableColumnHeader
+                            slot="column2"
+                            currentType={props.prefs.column2}
+                            defaultType={DEFAULT_COLUMN_PREFERENCES.column2}
+                            sortState={props.sortState ?? null}
+                            onSort={handleSortColumn}
+                            onChangeColumn={handleChangeCol2}
+                            otherColumnType={props.prefs.column1}
+                            sortable={props.viewSortable !== false}
+                          />
+                        ) : null}
+                      </th>
+                    </>
+                  )}
+                  {!props.isCompact && (
+                    <th className="explorer__grid__th--actions"></th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <EmbeddedExplorerGridRow
+                    key={row.original.id}
+                    row={row}
+                    isOvered={!!overedItemIds[row.original.id]}
+                    onClickRow={handleRowClick}
+                    onContextMenuRow={handleRowContextMenu}
+                    onOver={handleRowOver}
                   />
-                </th>
-                {!props.isCompact && (
-                  <>
-                    <th className="explorer__grid__th--info-col-1">
-                      {props.prefs && props.column1Config ? (
-                        <CustomizableColumnHeader
-                          slot="column1"
-                          currentType={props.prefs.column1}
-                          defaultType={DEFAULT_COLUMN_PREFERENCES.column1}
-                          sortState={props.sortState ?? null}
-                          onSort={handleSortColumn}
-                          onChangeColumn={handleChangeCol1}
-                          otherColumnType={props.prefs.column2}
-                          sortable={props.viewSortable !== false}
-                        />
-                      ) : (
-                        <div className="c__datagrid__header fs-h5 c__datagrid__header--sortable">
-                          {t("explorer.grid.last_update")}
-                        </div>
-                      )}
-                    </th>
-                    <th className="explorer__grid__th--info-col-2">
-                      {props.prefs && props.column2Config ? (
-                        <CustomizableColumnHeader
-                          slot="column2"
-                          currentType={props.prefs.column2}
-                          defaultType={DEFAULT_COLUMN_PREFERENCES.column2}
-                          sortState={props.sortState ?? null}
-                          onSort={handleSortColumn}
-                          onChangeColumn={handleChangeCol2}
-                          otherColumnType={props.prefs.column1}
-                          sortable={props.viewSortable !== false}
-                        />
-                      ) : null}
-                    </th>
-                  </>
-                )}
-                {!props.isCompact && (
-                  <th className="explorer__grid__th--actions"></th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <EmbeddedExplorerGridRow
-                  key={row.original.id}
-                  row={row}
-                  isOvered={!!overedItemIds[row.original.id]}
-                  onClickRow={handleRowClick}
-                  onContextMenuRow={handleRowContextMenu}
-                  onOver={handleRowOver}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         {moveModal.isOpen && moveItem && (
           <ExplorerMoveFolder
             {...moveModal}

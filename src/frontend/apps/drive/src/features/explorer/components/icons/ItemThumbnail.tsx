@@ -31,7 +31,12 @@ export const ItemThumbnail = ({ item, className }: ItemThumbnailProps) => {
 
   return (
     <div className={clsx(className, `${className}--thumbnail`)}>
-      <img src={src} alt={item.title} onError={() => setHasError(true)} />
+      <img
+        src={src}
+        alt={item.title}
+        loading="lazy"
+        onError={() => setHasError(true)}
+      />
     </div>
   );
 };
