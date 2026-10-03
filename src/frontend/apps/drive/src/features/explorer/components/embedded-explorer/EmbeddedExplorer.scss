@@ -243,6 +243,91 @@ $xl: map.get($themes, "default", "globals", "breakpoints", "xl");
     }
   }
 
+  &__cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    padding-bottom: 16px;
+
+    &:focus-within {
+      outline: none;
+    }
+
+    @media (max-width: $tablet) {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 8px;
+    }
+  }
+
+  &__card {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 0 8px 8px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background-color: var(--c--contextuals--background--surface--tertiary);
+    cursor: default;
+    user-select: none;
+
+    &:hover {
+      background-color: var(
+        --c--components--datagrid--body--background-color-hover
+      );
+    }
+
+    &.selected {
+      border-color: var(--c--contextuals--border--semantic--brand--tertiary);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+    }
+
+    &.over {
+      border-color: var(--c--contextuals--border--semantic--brand--primary);
+      background-color: var(
+        --c--contextuals--background--semantic--brand--tertiary
+      );
+    }
+
+    &__header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      > :first-child {
+        flex: 1;
+        min-width: 0;
+      }
+    }
+
+    &__preview {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 140px;
+      border-radius: 4px;
+      background-color: var(--c--contextuals--background--surface--secondary);
+      overflow: hidden;
+
+      &--thumbnail img {
+        display: block;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+    }
+
+    &__footer {
+      padding-top: 8px;
+      font-size: 12px;
+      color: var(--c--contextuals--content--semantic--neutral--secondary);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
   &.c__datagrid--empty {
     min-height: 200px;
     padding-bottom: 40px;

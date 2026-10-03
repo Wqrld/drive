@@ -10,7 +10,7 @@ export const useTableKeyboardNavigation = ({
   isDisabled = false,
 }: {
   table: Table<Item>;
-  tableRef: React.RefObject<HTMLTableElement | null>;
+  tableRef: React.RefObject<HTMLElement | null>;
   isDisabled?: boolean;
 }) => {
   const { itemId } = useGlobalExplorer();
@@ -76,7 +76,7 @@ export const useTableKeyboardNavigation = ({
     }
   };
 
-  const arrowUp = (event: KeyboardEvent<HTMLTableElement>) => {
+  const arrowUp = (event: KeyboardEvent<HTMLElement>) => {
     // If no item is selected, select the first item
     if (selectionStore.getSelectedItems().length === 0) {
       firstPress();
@@ -110,7 +110,7 @@ export const useTableKeyboardNavigation = ({
     }
   };
 
-  const arrowDown = (event: KeyboardEvent<HTMLTableElement>) => {
+  const arrowDown = (event: KeyboardEvent<HTMLElement>) => {
     // If no item is selected, select the first item
     if (selectionStore.getSelectedItems().length === 0) {
       firstPress();
@@ -163,7 +163,7 @@ export const useTableKeyboardNavigation = ({
   };
 
   // Handle keyboard navigation via up/down arrows
-  const onKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
+  const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     if (isDisabled) {
       return;
     }
