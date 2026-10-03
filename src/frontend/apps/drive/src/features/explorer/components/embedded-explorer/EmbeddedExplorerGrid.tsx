@@ -51,6 +51,8 @@ import { ColumnHeader } from "./headers/ColumnHeader";
 import { CustomizableColumnHeader } from "./headers/CustomizableColumnHeader";
 import { useTransientItemsPoller } from "../../hooks/useTransientItemsPoller";
 import { EmbeddedExplorerGridRow } from "./EmbeddedExplorerGridRow";
+import { EmbeddedExplorerGridCard } from "./EmbeddedExplorerGridCard";
+import { ViewMode } from "../../hooks/useViewMode";
 import posthog from "posthog-js";
 
 const POSTHOG_EVENT_COLUMN_TYPE_CHANGED = "column_type_changed";
@@ -73,6 +75,7 @@ export type EmbeddedExplorerGridProps = {
   onRestrictionUpdated?: (item: Item) => void | Promise<void>;
   onFileClick?: (item: Item) => void;
   disableKeyboardNavigation?: boolean;
+  viewMode?: ViewMode;
   // Custom columns
   sortState?: SortState;
   onSort?: (columnId: "title" | ColumnType) => void;
@@ -204,11 +207,14 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     enableRowSelection: true,
   });
 
+  const isGridView = props.viewMode === "grid";
   const tableRef = useRef<HTMLTableElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
-    tableRef,
+    tableRef: isGridView ? cardsRef : tableRef,
     isDisabled: isActionModalOpen || props.disableKeyboardNavigation,
+    isGrid: isGridView,
   });
 
   const handleCloseMoveModal = () => {
@@ -349,14 +355,14 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const handleRowClick = useCallback(
-    (e: React.MouseEvent<HTMLTableRowElement>, row: Row<Item>) => {
+    (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => {
       if (TRANSIENT_UPLOAD_STATES.includes(row.original.upload_state)) {
         return;
       }
 
       // Because if we use modals or other components, even with a Portal, React triggers events on the original parent.
-      // So we check that the clicked element is indeed an element of the table.
-      if (!(e.target as HTMLElement).closest("tr")) {
+      // So we check that the clicked element is indeed an element of the table or of a card.
+      if (!(e.target as HTMLElement).closest("tr, .explorer__grid__card")) {
         return;
       }
 
@@ -401,7 +407,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const handleRowContextMenu = useCallback(
-    (e: React.MouseEvent<HTMLTableRowElement>, row: Row<Item>) => {
+    (e: React.MouseEvent<HTMLElement>, row: Row<Item>) => {
       if (props.displayMode === "sdk") {
         return;
       }
@@ -561,6 +567,28 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
     </div>
   );
 
+  const cardsView = (
+    <div
+      ref={cardsRef}
+      className="explorer__grid__cards"
+      role="list"
+      aria-label={t("explorer.viewMode.grid")}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+    >
+      {table.getRowModel().rows.map((row) => (
+        <EmbeddedExplorerGridCard
+          key={row.original.id}
+          row={row}
+          isOvered={!!overedItemIds[row.original.id]}
+          onClickRow={handleRowClick}
+          onContextMenuRow={handleRowContextMenu}
+          onOver={handleRowOver}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <>
       {/* The context is only here to avoid the rerendering of react table cells
@@ -568,7 +596,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
       props via context, but it's quite overkill, unfortunatly we did not find a
       better solution. */}
       <EmbeddedExplorerGridContext.Provider value={contextValue}>
-        {tableView}
+        {isGridView ? cardsView : tableView}
         {moveModal.isOpen && moveItem && (
           <ExplorerMoveFolder
             {...moveModal}
