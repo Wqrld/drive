@@ -9,7 +9,7 @@ import jwt
 import requests
 
 from wopi.conversion.exceptions import ConversionProviderError
-from wopi.conversion.source_url import build_source_url
+from wopi.conversion.source_url import build_system_source_url
 
 
 class OnlyOfficeConversionBackend:
@@ -106,7 +106,7 @@ class OnlyOfficeConversionBackend:
         """Render the first page of the item as a PNG fitting in size x size."""
         return self._run(
             item,
-            build_source_url(item, item.creator),
+            build_system_source_url(item),
             "png",
             thumbnail={"aspect": 1, "first": True, "width": size, "height": size},
         )

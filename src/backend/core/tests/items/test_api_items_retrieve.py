@@ -4,7 +4,7 @@ Tests for items API endpoint in drive's core app: retrieve
 
 # pylint: disable=too-many-lines
 import random
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest import mock
 
 from django.contrib.auth.models import AnonymousUser
@@ -1583,36 +1583,33 @@ def test_api_items_retrieve_wopi_supported():
     assert response.json()["is_wopi_supported"] is True
 
 
-def test_api_items_retrieve_url_thumbnail(settings):
-    """WOPI supported files expose a thumbnail URL when a client can render thumbnails."""
-    settings.WOPI_CLIENTS = ["collabora"]
-    settings.WOPI_CLIENTS_CONFIGURATION = {
-        "collabora": {"options": {"ConvertServiceUrl": "http://collabora/cool/convert-to"}}
-    }
-    cache.set(
-        WOPI_CONFIGURATION_CACHE_KEY,
-        {
-            "mimetypes": {},
-            "extensions": {
-                "docx": {"url": "https://vendorA.com/launch_url", "client": "collabora"},
-            },
-        },
-    )
+@pytest.mark.parametrize(
+    "upload_state,thumbnail_updated_at,expected",
+    [
+        (models.ItemUploadStateChoices.READY, None, None),
+        (
+            models.ItemUploadStateChoices.READY,
+            datetime(2026, 10, 3, 12, tzinfo=UTC),
+            "http://localhost:8083/media/preview/item/{id}/thumbnail/1791028800000.png",
+        ),
+        (
+            models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
+            datetime(2026, 10, 3, 12, tzinfo=UTC),
+            None,
+        ),
+    ],
+)
+def test_api_items_retrieve_url_thumbnail(upload_state, thumbnail_updated_at, expected):
+    """Only expose a thumbnail URL, versioned by its render time, when there is one."""
     item = factories.ItemFactory(
         type=models.ItemTypeChoices.FILE,
         link_reach="public",
         filename="report.docx",
-        update_upload_state=models.ItemUploadStateChoices.READY,
+        update_upload_state=upload_state,
+        thumbnail_updated_at=thumbnail_updated_at,
     )
 
     response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
 
     assert response.status_code == 200
-    assert response.json()["url_thumbnail"] == (
-        f"http://localhost:8083/media/preview/item/{item.id!s}/thumbnail/thumbnail.png"
-    )
-
-    settings.WOPI_CLIENTS_CONFIGURATION = {"collabora": {"options": {}}}
-    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
-
-    assert response.json()["url_thumbnail"] is None
+    assert response.json()["url_thumbnail"] == (expected and expected.format(id=item.id))

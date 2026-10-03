@@ -1,6 +1,5 @@
 """Service layer for server-to-server legacy file conversion."""
 
-from functools import partial
 from os.path import splitext
 
 from django.conf import settings
@@ -11,6 +10,7 @@ from django.utils.translation import gettext as _
 from core import models
 from core.api.utils import detect_mimetype
 from core.models import Item
+from core.signals import item_file_ready
 from core.utils.item_title import manage_unique_title
 from wopi.conversion.backends.onlyoffice import OnlyOfficeConversionBackend
 from wopi.conversion.exceptions import (
@@ -20,7 +20,6 @@ from wopi.conversion.exceptions import (
 )
 from wopi.conversion.policy import is_forced_conversion, target_extension_for
 from wopi.conversion.source_url import build_source_url
-from wopi.tasks.thumbnails import generate_item_thumbnail
 
 MIME_SNIFF_BYTES = 2048
 
@@ -153,7 +152,7 @@ def perform_conversion(source_item, placeholder, user):
         default_storage.delete(placeholder.file_key)
         raise
 
-    transaction.on_commit(partial(generate_item_thumbnail.delay, str(placeholder.id)))
+    item_file_ready.send(sender=Item, item=placeholder)
     return placeholder
 
 

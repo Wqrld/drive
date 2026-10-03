@@ -90,6 +90,8 @@ def test_process_item_purge_item_file_is_ready():
     item.soft_delete()
     item.hard_delete()
     default_storage.save(item.file_key, BytesIO(b"my prose"))
+    item.thumbnail_updated_at = timezone.now()
+    item.save(update_fields=["thumbnail_updated_at"])
     default_storage.save(item.thumbnail_key, BytesIO(b"my thumbnail"))
     assert default_storage.exists(item.file_key)
 

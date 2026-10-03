@@ -1,5 +1,6 @@
 """Tests for document thumbnail generation."""
 
+from datetime import UTC, datetime
 from io import BytesIO
 from unittest import mock
 
@@ -36,6 +37,14 @@ def _configure_wopi(settings, clients):
     )
 
 
+def _render_time(hour):
+    """Fix the time a thumbnail is rendered at, without freezing the S3 request signing."""
+    return mock.patch(
+        "wopi.conversion.thumbnails.timezone.now",
+        return_value=datetime(2024, 10, 3, hour, tzinfo=UTC),
+    )
+
+
 def _png(width, height):
     """Return the bytes of a blank PNG image."""
     buffer = BytesIO()
@@ -52,27 +61,30 @@ def _file(filename="report.docx"):
     )
 
 
-def test_resolve_thumbnail_backend_without_convert_service_url(settings):
-    """Thumbnails are disabled when no client defines a ConvertServiceUrl."""
-    _configure_wopi(settings, {"collabora": {"SupportsRename": False}})
+def test_resolve_thumbnail_backend_requires_opt_in(settings):
+    """A ConvertServiceUrl alone, set for legacy conversion, does not enable thumbnails."""
+    _configure_wopi(
+        settings,
+        {"onlyoffice": {"ConvertServiceUrl": "http://onlyoffice/converter"}},
+    )
 
     assert thumbnails.resolve_thumbnail_backend() is None
 
 
 def test_resolve_thumbnail_backend_ignores_unknown_client(settings):
     """A client without a known backend cannot render thumbnails."""
-    _configure_wopi(settings, {"vendorA": {"ConvertServiceUrl": "https://vendorA.example"}})
+    _configure_wopi(settings, {"vendorA": {"ThumbnailServiceUrl": "https://vendorA.example"}})
 
     assert thumbnails.resolve_thumbnail_backend() is None
 
 
-def test_resolve_thumbnail_backend_picks_first_client_defining_url(settings):
-    """The first client defining a ConvertServiceUrl renders thumbnails."""
+def test_resolve_thumbnail_backend_picks_first_client_opting_in(settings):
+    """The first client defining a ThumbnailServiceUrl renders thumbnails."""
     _configure_wopi(
         settings,
         {
             "collabora": {},
-            "onlyoffice": {"ConvertServiceUrl": "http://onlyoffice/converter"},
+            "onlyoffice": {"ThumbnailServiceUrl": "http://onlyoffice/converter"},
         },
     )
 
@@ -83,30 +95,98 @@ def test_resolve_thumbnail_backend_picks_first_client_defining_url(settings):
 
 
 def test_generate_thumbnail_stores_resized_png(settings):
-    """Store the rendered first page resized to WOPI_THUMBNAIL_SIZE, replacing older ones."""
+    """Store the rendered first page resized to WOPI_THUMBNAIL_SIZE and record when."""
     settings.WOPI_THUMBNAIL_SIZE = 64
-    _configure_wopi(settings, {"collabora": {"ConvertServiceUrl": "http://collabora"}})
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    item = _file()
+    assert item.thumbnail_key is None
+
+    with (
+        mock.patch.object(
+            CollaboraConversionBackend,
+            "thumbnail",
+            side_effect=lambda *_: ContentFile(_png(800, 1200)),
+        ),
+        _render_time(12),
+    ):
+        assert thumbnails.generate_thumbnail(item) is True
+
+    item.refresh_from_db()
+    assert item.thumbnail_key == f"item/{item.id!s}/thumbnail/1727956800000.png"
+    with default_storage.open(item.thumbnail_key) as file:
+        assert Image.open(file).size == (43, 64)
+
+
+def test_generate_thumbnail_replaces_previous_thumbnail(settings):
+    """A new render gets a new key, so browsers cannot serve the old one from cache."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
     item = _file()
 
     with mock.patch.object(
         CollaboraConversionBackend,
         "thumbnail",
-        side_effect=lambda *_: ContentFile(_png(800, 1200)),
+        side_effect=lambda *_: ContentFile(_png(80, 120)),
+    ):
+        with _render_time(12):
+            thumbnails.generate_thumbnail(item)
+        previous_key = item.thumbnail_key
+        with _render_time(13):
+            thumbnails.generate_thumbnail(item)
+        # Rendering twice within the same millisecond keeps a single file.
+        with _render_time(13):
+            thumbnails.generate_thumbnail(item)
+
+    item.refresh_from_db()
+    assert item.thumbnail_key != previous_key
+    assert default_storage.exists(item.thumbnail_key)
+    assert not default_storage.exists(previous_key)
+    _dirs, files = default_storage.listdir(f"item/{item.id!s}/thumbnail")
+    assert files == [item.thumbnail_key.rsplit("/", 1)[1]]
+
+
+def test_generate_thumbnail_does_not_depend_on_the_creator(settings):
+    """Thumbnails are rendered for ready files whose creator is gone."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    item = _file()
+    item.creator = None
+
+    with mock.patch.object(
+        CollaboraConversionBackend, "thumbnail", return_value=ContentFile(_png(80, 120))
     ):
         assert thumbnails.generate_thumbnail(item) is True
-        assert thumbnails.generate_thumbnail(item) is True
 
-    with default_storage.open(item.thumbnail_key) as file:
-        assert Image.open(file).size == (43, 64)
+
+@pytest.mark.parametrize(
+    "upload_state",
+    [
+        models.ItemUploadStateChoices.ANALYZING,
+        models.ItemUploadStateChoices.SUSPICIOUS,
+        models.ItemUploadStateChoices.FILE_TOO_LARGE_TO_ANALYZE,
+    ],
+)
+def test_generate_thumbnail_skips_files_not_ready(settings, upload_state):
+    """Only ready files get a thumbnail."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        filename="report.docx",
+        update_upload_state=upload_state,
+    )
+
+    with mock.patch.object(CollaboraConversionBackend, "thumbnail") as thumbnail:
+        assert thumbnails.generate_thumbnail(item) is False
+
+    thumbnail.assert_not_called()
 
 
 def test_generate_thumbnail_skips_unsupported_item(settings):
     """Files the WOPI client does not support get no thumbnail."""
-    _configure_wopi(settings, {"collabora": {"ConvertServiceUrl": "http://collabora"}})
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
     item = _file("photo.png")
 
     with mock.patch.object(CollaboraConversionBackend, "thumbnail") as thumbnail:
         assert thumbnails.generate_thumbnail(item) is False
 
     thumbnail.assert_not_called()
-    assert not default_storage.exists(item.thumbnail_key)
+    item.refresh_from_db()
+    assert item.thumbnail_updated_at is None

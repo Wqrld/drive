@@ -23,7 +23,6 @@ from core.api import utils
 from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
-from wopi.conversion.thumbnails import resolve_thumbnail_backend
 
 logger = logging.getLogger(__name__)
 
@@ -426,13 +425,8 @@ class ListItemSerializer(serializers.ModelSerializer):
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
 
     def get_url_thumbnail(self, item):
-        """Return the URL of the thumbnail rendered by the WOPI provider."""
-        if (
-            item.type != models.ItemTypeChoices.FILE
-            or item.upload_state != models.ItemUploadStateChoices.READY
-            or resolve_thumbnail_backend() is None
-            or not self.get_is_wopi_supported(item)
-        ):
+        """Return the URL of the rendered thumbnail, if the item has one."""
+        if item.thumbnail_key is None or item.upload_state != models.ItemUploadStateChoices.READY:
             return None
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{item.thumbnail_key}"
 
