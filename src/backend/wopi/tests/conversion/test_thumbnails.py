@@ -20,18 +20,23 @@ from wopi.tasks.configure_wopi import WOPI_CONFIGURATION_CACHE_KEY
 pytestmark = pytest.mark.django_db
 
 
-def _configure_wopi(settings, clients):
-    """Configure WOPI clients with their options and a discovery covering .docx files."""
+def _configure_wopi(settings, clients, renderable=None):
+    """Configure WOPI clients with their options, each rendering .docx and PDF by default."""
     settings.WOPI_CLIENTS = list(clients)
     settings.WOPI_CLIENTS_CONFIGURATION = {
         client: {"options": options} for client, options in clients.items()
+    }
+    renderable = renderable or {
+        client: {"extensions": {"docx"}, "mimetypes": {"application/pdf"}} for client in clients
     }
     cache.set(
         WOPI_CONFIGURATION_CACHE_KEY,
         {
             "mimetypes": {},
-            "extensions": {
-                "docx": {"url": "https://office.example/launch", "client": next(iter(clients))}
+            "extensions": {},
+            **{
+                client: {"proof_keys": {}, "renderable": formats}
+                for client, formats in renderable.items()
             },
         },
     )
@@ -68,14 +73,14 @@ def test_resolve_thumbnail_backend_requires_opt_in(settings):
         {"onlyoffice": {"ConvertServiceUrl": "http://onlyoffice/converter"}},
     )
 
-    assert thumbnails.resolve_thumbnail_backend() is None
+    assert thumbnails.resolve_thumbnail_backend(_file()) is None
 
 
 def test_resolve_thumbnail_backend_ignores_unknown_client(settings):
     """A client without a known backend cannot render thumbnails."""
     _configure_wopi(settings, {"vendorA": {"ThumbnailServiceUrl": "https://vendorA.example"}})
 
-    assert thumbnails.resolve_thumbnail_backend() is None
+    assert thumbnails.resolve_thumbnail_backend(_file()) is None
 
 
 def test_resolve_thumbnail_backend_picks_first_client_opting_in(settings):
@@ -88,10 +93,50 @@ def test_resolve_thumbnail_backend_picks_first_client_opting_in(settings):
         },
     )
 
-    backend = thumbnails.resolve_thumbnail_backend()
+    backend = thumbnails.resolve_thumbnail_backend(_file())
 
     assert isinstance(backend, OnlyOfficeConversionBackend)
     assert backend.convert_service_url == "http://onlyoffice/converter"
+
+
+def test_resolve_thumbnail_backend_picks_client_rendering_the_format(settings):
+    """A format only the second client opens is rendered by that client, not the first."""
+    _configure_wopi(
+        settings,
+        {
+            "collabora": {"ThumbnailServiceUrl": "http://collabora"},
+            "onlyoffice": {"ThumbnailServiceUrl": "http://onlyoffice/converter"},
+        },
+        renderable={
+            "collabora": {"extensions": {"docx"}, "mimetypes": set()},
+            "onlyoffice": {"extensions": {"docx", "djvu"}, "mimetypes": set()},
+        },
+    )
+
+    assert isinstance(
+        thumbnails.resolve_thumbnail_backend(_file("report.docx")), CollaboraConversionBackend
+    )
+    assert isinstance(
+        thumbnails.resolve_thumbnail_backend(_file("scan.djvu")), OnlyOfficeConversionBackend
+    )
+    assert thumbnails.resolve_thumbnail_backend(_file("notes.xyz")) is None
+
+
+@pytest.mark.parametrize(
+    "filename,mimetype",
+    [
+        ("REPORT.DOCX", "application/octet-stream"),
+        ("report", "application/pdf"),
+        ("report.pdf", "application/pdf"),
+    ],
+)
+def test_resolve_thumbnail_backend_matches_extension_or_mimetype(settings, filename, mimetype):
+    """Formats are matched by case-insensitive extension, then by mimetype, PDF included."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    item = _file(filename)
+    item.mimetype = mimetype
+
+    assert isinstance(thumbnails.resolve_thumbnail_backend(item), CollaboraConversionBackend)
 
 
 def test_generate_thumbnail_stores_resized_png(settings):
@@ -180,7 +225,7 @@ def test_generate_thumbnail_skips_files_not_ready(settings, upload_state):
 
 
 def test_generate_thumbnail_skips_unsupported_item(settings):
-    """Files the WOPI client does not support get no thumbnail."""
+    """Files no WOPI client opens get no thumbnail."""
     _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
     item = _file("photo.png")
 
@@ -190,3 +235,19 @@ def test_generate_thumbnail_skips_unsupported_item(settings):
     thumbnail.assert_not_called()
     item.refresh_from_db()
     assert item.thumbnail_updated_at is None
+
+
+def test_generate_thumbnail_skips_browser_images(settings):
+    """Images the browser previews keep their preview, even when the client renders them."""
+    _configure_wopi(
+        settings,
+        {"collabora": {"ThumbnailServiceUrl": "http://collabora"}},
+        renderable={"collabora": {"extensions": {"png"}, "mimetypes": set()}},
+    )
+    item = _file("photo.png")
+    item.mimetype = "image/png"
+
+    with mock.patch.object(CollaboraConversionBackend, "thumbnail") as thumbnail:
+        assert thumbnails.generate_thumbnail(item) is False
+
+    thumbnail.assert_not_called()
