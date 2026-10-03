@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { Item, ItemUploadState } from "@/features/drivers/types";
 import { ItemIcon } from "../icons/ItemIcon";
+import { ItemThumbnail } from "../icons/ItemThumbnail";
 import { Button, useModal, IconSize } from "@gouvfr-lasuite/ui-components";
 import { useGlobalExplorer } from "../GlobalExplorerContext";
 import { useSelectedItems } from "../../stores/selectionStore";
@@ -11,27 +11,6 @@ import multipleSelection from "@/assets/mutliple-selection.png";
 import emptySelection from "@/assets/empty-selection.png";
 import { ItemShareModal } from "../modals/share/ItemShareModal";
 import { ItemInfo } from "@/features/items/components/ItemInfo";
-
-const ItemThumbnail = ({ item }: { item: Item }) => {
-  const [hasError, setHasError] = useState(false);
-  const src =
-    item.url_thumbnail ??
-    (item.mimetype?.startsWith("image/") ? item.url_preview : undefined);
-
-  if (!src || hasError) {
-    return (
-      <div className="explorer__right-panel__item-type">
-        <ItemIcon item={item} size={IconSize.X_LARGE} />
-      </div>
-    );
-  }
-
-  return (
-    <div className="explorer__right-panel__item-type explorer__right-panel__item-type--thumbnail">
-      <img src={src} alt={item.title} onError={() => setHasError(true)} />
-    </div>
-  );
-};
 
 type ExplorerRightPanelContentProps = {
   item?: Item;
@@ -117,7 +96,11 @@ export const ExplorerRightPanelContent = ({
               {firstSelectedItem.title}
             </div>
           </div>
-          <ItemThumbnail key={firstSelectedItem.id} item={firstSelectedItem} />
+          <ItemThumbnail
+            key={firstSelectedItem.id}
+            item={firstSelectedItem}
+            className="explorer__right-panel__item-type"
+          />
           {showWarning && (
             <div className="explorer__right-panel__suspicious-warning">
               <div className="explorer__right-panel__suspicious-warning__text">
