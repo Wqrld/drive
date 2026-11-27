@@ -49,8 +49,10 @@ def test_thumbnail_raises_provider_error_on_http_error(item):
     """Translate a non-2xx response into a provider error."""
     responses.add(responses.POST, f"{CONVERT_URL}/png", status=403)
 
+    backend = CollaboraConversionBackend(convert_service_url=CONVERT_URL)
+
     with pytest.raises(exceptions.ConversionProviderError, match="status 403"):
-        CollaboraConversionBackend(convert_service_url=CONVERT_URL).thumbnail(item, 512)
+        backend.thumbnail(item, 512)
 
 
 @responses.activate
@@ -60,5 +62,7 @@ def test_thumbnail_raises_provider_error_on_transport_error(item):
         responses.POST, f"{CONVERT_URL}/png", body=requests.exceptions.ConnectionError("down")
     )
 
+    backend = CollaboraConversionBackend(convert_service_url=CONVERT_URL)
+
     with pytest.raises(exceptions.ConversionProviderError, match="down"):
-        CollaboraConversionBackend(convert_service_url=CONVERT_URL).thumbnail(item, 512)
+        backend.thumbnail(item, 512)

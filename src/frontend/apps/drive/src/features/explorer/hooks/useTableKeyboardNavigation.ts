@@ -134,7 +134,7 @@ export const useTableKeyboardNavigation = ({
       const added: Item[] = [];
       for (
         let index = currentSelectedIndex + step;
-        index !== newSelectedIndex + step;
+        step > 0 ? index <= newSelectedIndex : index >= newSelectedIndex;
         index += step
       ) {
         added.push(rows[index].original);

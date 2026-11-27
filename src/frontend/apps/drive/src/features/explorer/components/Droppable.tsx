@@ -14,8 +14,7 @@ type DroppableProps = {
   nodeTree?: NodeRendererProps<TreeDataItem<TreeViewDataType<Item>>>;
   children: React.ReactNode;
   onOver?: (isOver: boolean, fromItem: Item) => void;
-  // ARIA role of the wrapper, which stands for the item in a list of cards.
-  role?: React.AriaRole;
+  as?: "div" | "li";
 };
 
 export const Droppable = (props: DroppableProps) => {
@@ -35,9 +34,10 @@ export const Droppable = (props: DroppableProps) => {
     }
   }, [isOver, props.item, active]);
 
+  const Tag = props.as ?? "div";
   return (
-    <div ref={setNodeRef} style={style} className="droppable" role={props.role}>
+    <Tag ref={setNodeRef} style={style} className="droppable">
       {props.children}
-    </div>
+    </Tag>
   );
 };

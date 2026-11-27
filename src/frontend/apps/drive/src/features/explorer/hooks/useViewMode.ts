@@ -27,12 +27,12 @@ export const storeViewMode = (viewMode: ViewMode) => {
 };
 
 export const useViewMode = () => {
-  const [viewMode, setViewModeState] = useState<ViewMode>(getStoredViewMode);
+  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
 
-  const setViewMode = useCallback((value: ViewMode) => {
-    setViewModeState(value);
+  const changeViewMode = useCallback((value: ViewMode) => {
+    setViewMode(value);
     storeViewMode(value);
   }, []);
 
-  return { viewMode, setViewMode };
+  return { viewMode, setViewMode: changeViewMode };
 };

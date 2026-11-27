@@ -99,10 +99,11 @@ def test_resolve_thumbnail_backend_refreshes_stale_configuration(settings, clien
         configuration["collabora"] = client_configuration
     cache.set(WOPI_CONFIGURATION_CACHE_KEY, configuration)
 
+    item = _file()
     with mock.patch("wopi.conversion.thumbnails.configure_wopi_clients") as configure:
         for _ in range(2):
             with pytest.raises(ConversionProviderError):
-                thumbnails.resolve_thumbnail_backend(_file())
+                thumbnails.resolve_thumbnail_backend(item)
 
     # Concurrent renders queue a single refresh.
     configure.delay.assert_called_once_with()

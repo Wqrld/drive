@@ -42,7 +42,7 @@ const EmbeddedExplorerGridCardComponent = ({
     <Droppable
       id={`${row.id}_card`}
       item={item}
-      role="listitem"
+      as="li"
       disabled={
         isSelected ||
         dropTarget?.type !== ItemType.FOLDER ||

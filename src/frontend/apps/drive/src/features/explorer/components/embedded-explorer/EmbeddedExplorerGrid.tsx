@@ -209,7 +209,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
 
   const isGridView = props.viewMode === "grid";
   const tableRef = useRef<HTMLTableElement>(null);
-  const cardsRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLUListElement>(null);
   const { onKeyDown } = useTableKeyboardNavigation({
     table,
     tableRef: isGridView ? cardsRef : tableRef,
@@ -568,10 +568,9 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
   );
 
   const cardsView = (
-    <div
+    <ul
       ref={cardsRef}
       className="explorer__grid__cards"
-      role="list"
       aria-label={t("explorer.viewMode.grid")}
       tabIndex={0}
       onKeyDown={onKeyDown}
@@ -586,7 +585,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           onOver={handleRowOver}
         />
       ))}
-    </div>
+    </ul>
   );
 
   return (

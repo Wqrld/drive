@@ -24,6 +24,17 @@ from drive.celery_app import app
 logger = logging.getLogger(__name__)
 
 
+def _delete_file_and_thumbnails(item):
+    """Delete the file of an item and every thumbnail rendered for it."""
+    _dirs, thumbnails = default_storage.listdir(item.thumbnail_folder)
+    thumbnail_keys = [f"{item.thumbnail_folder}/{name}" for name in thumbnails]
+    for key in [item.file_key, *thumbnail_keys]:
+        try:
+            default_storage.delete(key)
+        except FileNotFoundError:
+            pass
+
+
 @app.task
 def process_item_purge(item_id):
     """
@@ -63,16 +74,7 @@ def process_item_purge(item_id):
     # Get descendants, leaf first. Don't burst memory
     for item in Item.objects.filter(path__descendants=root.path).order_by("-path").iterator():
         if item.type == ItemTypeChoices.FILE and item.file_key:
-            # Every thumbnail, not only the current one: a render that lost against a
-            # newer one, or that finished after the deletion, may have left its own.
-            _dirs, thumbnails = default_storage.listdir(item.thumbnail_folder)
-            thumbnail_keys = [f"{item.thumbnail_folder}/{name}" for name in thumbnails]
-            for key in [item.file_key, *thumbnail_keys]:
-                try:
-                    default_storage.delete(key)
-                except FileNotFoundError:
-                    # File already absent from storage: ignore and continue
-                    pass
+            _delete_file_and_thumbnails(item)
 
             # Drop any malware detection record so the analysis is not relaunched
             MalwareDetection.objects.filter(path=item.file_key).delete()
