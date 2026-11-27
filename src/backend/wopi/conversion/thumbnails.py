@@ -85,6 +85,7 @@ def is_thumbnail_pending(item, configuration):
         or item.thumbnail_updated_at is not None
         or item.upload_state != models.ItemUploadStateChoices.READY
         or item.mimetype in BROWSER_IMAGE_MIMETYPES
+        or (item.size or 0) > settings.WOPI_THUMBNAIL_MAX_FILE_SIZE
     ):
         return False
     extension = item.extension.lower() if item.extension else None
@@ -105,6 +106,7 @@ def generate_thumbnail(item):
     if (
         item.upload_state != models.ItemUploadStateChoices.READY
         or item.mimetype in BROWSER_IMAGE_MIMETYPES
+        or (item.size or 0) > settings.WOPI_THUMBNAIL_MAX_FILE_SIZE
     ):
         return False
     backend = resolve_thumbnail_backend(item)

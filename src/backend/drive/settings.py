@@ -1759,6 +1759,9 @@ class Base(Configuration):
     WOPI_THUMBNAIL_SIZE = values.IntegerValue(
         512, environ_name="WOPI_THUMBNAIL_SIZE", environ_prefix=None
     )
+    WOPI_THUMBNAIL_MAX_FILE_SIZE = values.IntegerValue(
+        100 * 1024 * 1024, environ_name="WOPI_THUMBNAIL_MAX_FILE_SIZE", environ_prefix=None
+    )
     # Seconds a file that already has a thumbnail waits before its re-render, so the
     # saves of an editing session collapse into a single render.
     WOPI_THUMBNAIL_DEBOUNCE = values.IntegerValue(

@@ -2595,6 +2595,8 @@
                     },
                     "url_thumbnail": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
                         "readOnly": true
                     },
                     "thumbnail_pending": {
@@ -3029,6 +3031,8 @@
                     },
                     "url_thumbnail": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
                         "readOnly": true
                     },
                     "thumbnail_pending": {
@@ -3274,6 +3278,8 @@
                     },
                     "url_thumbnail": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
                         "readOnly": true
                     },
                     "thumbnail_pending": {
@@ -3793,6 +3799,8 @@
                     },
                     "url_thumbnail": {
                         "type": "string",
+                        "nullable": true,
+                        "description": "Return the URL of the rendered thumbnail, if the item has one.",
                         "readOnly": true
                     },
                     "thumbnail_pending": {

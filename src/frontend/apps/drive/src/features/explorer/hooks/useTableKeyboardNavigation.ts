@@ -74,13 +74,28 @@ export const useTableKeyboardNavigation = ({
       // Use case: the page just displayed, you press "ArrowUp/Down", you expect to select the first item.
       setSelectedItems([table.getRowModel().rows[0].original]);
       setLastSelectedIndex(0);
+      focusItem(0);
     } else {
       // Use case example: you selected items, you delete them. You press "ArrowUp/Down", you expect to select the item that was
       // just below the last selected item, which is now deleted.
       const newSelectedIndex = cap();
       setSelectedItems([table.getRowModel().rows[newSelectedIndex].original]);
       setLastSelectedIndex(newSelectedIndex);
+      focusItem(newSelectedIndex);
     }
+  };
+
+  // In the grid, the focus follows the selection so that screen readers
+  // announce the item and it scrolls into view.
+  const focusItem = (index: number) => {
+    if (!isGrid) {
+      return;
+    }
+    tableRef.current
+      ?.querySelector<HTMLElement>(
+        `[data-id="${table.getRowModel().rows[index].original.id}"]`,
+      )
+      ?.focus();
   };
 
   // Number of items per row: one in the table, the rendered columns in the grid.
@@ -148,16 +163,7 @@ export const useTableKeyboardNavigation = ({
       setSelectedItems([rows[newSelectedIndex].original]);
     }
     setLastSelectedIndex(newSelectedIndex);
-
-    if (isGrid) {
-      // Follow the selection with the focus, so that screen readers announce the
-      // item and it scrolls into view.
-      tableRef.current
-        ?.querySelector<HTMLElement>(
-          `[data-id="${rows[newSelectedIndex].original.id}"]`,
-        )
-        ?.focus();
-    }
+    focusItem(newSelectedIndex);
   };
 
   // Handle keyboard navigation via arrows: up/down in the table, all four in the grid

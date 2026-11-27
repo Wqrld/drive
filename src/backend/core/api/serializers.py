@@ -439,7 +439,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             return None
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{quote(item.file_key)}"
 
-    def get_url_thumbnail(self, item):
+    def get_url_thumbnail(self, item) -> str | None:
         """Return the URL of the rendered thumbnail, if the item has one."""
         if item.thumbnail_key is None or item.upload_state != models.ItemUploadStateChoices.READY:
             return None

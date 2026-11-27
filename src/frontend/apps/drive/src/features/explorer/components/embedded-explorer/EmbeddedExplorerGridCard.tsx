@@ -68,7 +68,11 @@ const EmbeddedExplorerGridCardComponent = ({
         onClick={(e) => onClickRow(e, row)}
         onContextMenu={(e) => onContextMenuRow(e, row)}
         onKeyDown={(e) => {
-          if (e.key === "Enter" && !isTransient) {
+          if (e.target !== e.currentTarget || isTransient) {
+            return;
+          }
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
             onOpenRow(row);
           }
         }}

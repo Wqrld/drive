@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export type ViewMode = "list" | "grid";
 
@@ -27,7 +27,12 @@ export const storeViewMode = (viewMode: ViewMode) => {
 };
 
 export const useViewMode = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
+  // Read after hydration: the prerendered page has no storage.
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
+
+  useEffect(() => {
+    setViewMode(getStoredViewMode());
+  }, []);
 
   const changeViewMode = useCallback((value: ViewMode) => {
     setViewMode(value);

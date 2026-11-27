@@ -30,7 +30,11 @@ def queue_item_thumbnail(item_id, countdown=0):
     if cache.add(
         thumbnail_pending_key(item_id), True, timeout=countdown + THUMBNAIL_PENDING_MARGIN
     ):
-        generate_item_thumbnail.apply_async((item_id,), countdown=countdown)
+        try:
+            generate_item_thumbnail.apply_async((item_id,), countdown=countdown)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.exception("Could not queue the thumbnail render of item %s", item_id)
+            cache.delete(thumbnail_pending_key(item_id))
 
 
 @app.task(
