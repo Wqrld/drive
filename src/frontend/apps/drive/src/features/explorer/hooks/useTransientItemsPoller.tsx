@@ -18,11 +18,15 @@ import { useTranslation } from "react-i18next";
 const POLL_INTERVAL = 3000;
 const POLL_TIMEOUT = 10 * 60 * 1000;
 
-// Items seen settling are polled on, once ready, until their thumbnail is
-// rendered, which only starts then.
-const isPolled = (item: Item, settled: Set<string>) =>
+// A thumbnail is only rendered once its file is ready, which may be as the
+// upload ends. Recent items are polled until it is: older ones are left alone,
+// so that a render that failed is not polled on every visit.
+const THUMBNAIL_POLL_WINDOW = 2 * 60 * 1000;
+
+const isPolled = (item: Item) =>
   POLLED_UPLOAD_STATES.includes(item.upload_state) ||
-  (settled.has(item.id) && !!item.thumbnail_pending);
+  (!!item.thumbnail_pending &&
+    Date.now() - new Date(item.created_at).getTime() < THUMBNAIL_POLL_WINDOW);
 
 export const useTransientItemsPoller = (items: Item[]) => {
   const refreshItemCache = useRefreshItemCache();
@@ -31,10 +35,9 @@ export const useTransientItemsPoller = (items: Item[]) => {
   const { t } = useTranslation();
   const startTimesRef = useRef<Map<string, number>>(new Map());
   const failedToastShownRef = useRef<Set<string>>(new Set());
-  const settledRef = useRef<Set<string>>(new Set());
 
   const transientItems = useMemo(
-    () => items.filter((i) => isPolled(i, settledRef.current)),
+    () => items.filter(isPolled),
     [items],
   );
 
@@ -48,7 +51,6 @@ export const useTransientItemsPoller = (items: Item[]) => {
     for (const id of startTimesRef.current.keys()) {
       if (!transientIds.has(id)) {
         startTimesRef.current.delete(id);
-        settledRef.current.delete(id);
       }
     }
   }, [transientItems]);
@@ -60,7 +62,6 @@ export const useTransientItemsPoller = (items: Item[]) => {
         try {
           const updatedItem = await getDriver().getItem(item.id);
           if (!POLLED_UPLOAD_STATES.includes(updatedItem.upload_state)) {
-            settledRef.current.add(item.id);
             await refreshItemCache(item.id, updatedItem);
           }
           return updatedItem;
@@ -92,7 +93,7 @@ export const useTransientItemsPoller = (items: Item[]) => {
         if (data === null) {
           return false;
         }
-        if (data && !isPolled(data, settledRef.current)) {
+        if (data && !isPolled(data)) {
           return false;
         }
         const startTime = startTimesRef.current.get(item.id) ?? Date.now();
