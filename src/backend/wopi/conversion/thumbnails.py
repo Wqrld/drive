@@ -79,11 +79,7 @@ def resolve_thumbnail_backend(item):
 
 
 def is_thumbnail_pending(item, configuration):
-    """Return whether a ready item has no thumbnail yet but a client opting in renders it.
-
-    Unlike resolve_thumbnail_backend, it has no side effect: a client whose formats are
-    unknown is skipped.
-    """
+    """Return whether a ready item has no thumbnail yet but a client renders it."""
     if (
         item.filename is None
         or item.thumbnail_updated_at is not None

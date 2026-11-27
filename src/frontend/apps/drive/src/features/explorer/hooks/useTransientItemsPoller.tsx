@@ -18,9 +18,7 @@ import { useTranslation } from "react-i18next";
 const POLL_INTERVAL = 3000;
 const POLL_TIMEOUT = 10 * 60 * 1000;
 
-// A thumbnail is only rendered once its file is ready, which may be as the
-// upload ends. Recent items are polled until it is: older ones are left alone,
-// so that a render that failed is not polled on every visit.
+// Older items are left alone so that a failed render is not polled forever.
 const THUMBNAIL_POLL_WINDOW = 2 * 60 * 1000;
 
 const isPolled = (item: Item) =>
