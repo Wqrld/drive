@@ -583,6 +583,7 @@ export const EmbeddedExplorerGrid = (props: EmbeddedExplorerGridProps) => {
           onClickRow={handleRowClick}
           onContextMenuRow={handleRowContextMenu}
           onOver={handleRowOver}
+          onOpenRow={openRow}
         />
       ))}
     </ul>

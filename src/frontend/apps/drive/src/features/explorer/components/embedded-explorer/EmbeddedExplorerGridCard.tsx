@@ -1,11 +1,15 @@
 import { memo } from "react";
-import { flexRender } from "@tanstack/react-table";
+import { flexRender, Row } from "@tanstack/react-table";
 import clsx from "clsx";
 import {
   getDropTarget,
   isUnavailableRestriction,
 } from "@/features/drivers/utils";
-import { ItemType, TRANSIENT_UPLOAD_STATES } from "@/features/drivers/types";
+import {
+  Item,
+  ItemType,
+  TRANSIENT_UPLOAD_STATES,
+} from "@/features/drivers/types";
 import { Draggable } from "@/features/explorer/components/Draggable";
 import { Droppable } from "@/features/explorer/components/Droppable";
 import { ItemThumbnail } from "@/features/explorer/components/icons/ItemThumbnail";
@@ -24,7 +28,8 @@ const EmbeddedExplorerGridCardComponent = ({
   onClickRow,
   onContextMenuRow,
   onOver,
-}: EmbeddedExplorerGridRowProps) => {
+  onOpenRow,
+}: EmbeddedExplorerGridRowProps & { onOpenRow: (row: Row<Item>) => void }) => {
   const item = row.original;
   const dropTarget = getDropTarget(item);
   const isSelected = useIsItemSelected(item.id);
@@ -62,6 +67,11 @@ const EmbeddedExplorerGridCardComponent = ({
         tabIndex={0}
         onClick={(e) => onClickRow(e, row)}
         onContextMenu={(e) => onContextMenuRow(e, row)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !isTransient) {
+            onOpenRow(row);
+          }
+        }}
       >
         <div className="explorer__grid__card__header">
           {renderCell("title")}
