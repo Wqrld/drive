@@ -14,6 +14,7 @@ and this project adheres to
 - ✨(frontend) show item thumbnails in the right panel
 - ✨(frontend) add a grid view to the explorer
 - ✨(backend) expose whether an item thumbnail is still to be rendered
+- ✨(frontend) show a new thumbnail without a page refresh
 
 ## [v1.1.1] - 2026-11-23
 

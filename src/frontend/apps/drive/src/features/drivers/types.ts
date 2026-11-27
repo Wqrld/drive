@@ -98,6 +98,8 @@ export type Item = {
   url?: string;
   url_preview?: string;
   url_thumbnail?: string;
+  // A thumbnail is still to be rendered for this ready file.
+  thumbnail_pending?: boolean;
   size?: number;
   mimetype?: string;
   user_roles?: Role[];
