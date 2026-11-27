@@ -13,6 +13,7 @@ and this project adheres to
 - ✨(backend) render document thumbnails through the WOPI client
 - ✨(frontend) show item thumbnails in the right panel
 - ✨(frontend) add a grid view to the explorer
+- ✨(backend) expose whether an item thumbnail is still to be rendered
 
 ## [v1.1.1] - 2026-11-23
 

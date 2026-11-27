@@ -78,6 +78,29 @@ def resolve_thumbnail_backend(item):
     return None
 
 
+def is_thumbnail_pending(item, configuration):
+    """Return whether a ready item has no thumbnail yet but a client opting in renders it.
+
+    Unlike resolve_thumbnail_backend, it has no side effect: a client whose formats are
+    unknown is skipped.
+    """
+    if (
+        item.filename is None
+        or item.thumbnail_updated_at is not None
+        or item.upload_state != models.ItemUploadStateChoices.READY
+        or item.mimetype in BROWSER_IMAGE_MIMETYPES
+    ):
+        return False
+    extension = item.extension.lower() if item.extension else None
+    for client, _thumbnail_service_url in thumbnail_clients():
+        renderable = configuration.get(client, {}).get("renderable") or {}
+        if extension in renderable.get("extensions", ()) or item.mimetype in renderable.get(
+            "mimetypes", ()
+        ):
+            return True
+    return False
+
+
 def generate_thumbnail(item):
     """Render, resize and store the item thumbnail.
 

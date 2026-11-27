@@ -164,6 +164,61 @@ def test_resolve_thumbnail_backend_matches_extension_or_mimetype(settings, filen
     assert isinstance(thumbnails.resolve_thumbnail_backend(item), CollaboraConversionBackend)
 
 
+def test_is_thumbnail_pending_for_rendered_format_without_thumbnail(settings):
+    """A ready file a client renders is pending until its thumbnail is recorded."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    item = _file("REPORT.DOCX")
+    configuration = cache.get(WOPI_CONFIGURATION_CACHE_KEY)
+
+    assert thumbnails.is_thumbnail_pending(item, configuration) is True
+
+    item.thumbnail_updated_at = datetime(2024, 10, 3, tzinfo=UTC)
+    assert thumbnails.is_thumbnail_pending(item, configuration) is False
+
+
+@pytest.mark.parametrize(
+    "filename,mimetype,upload_state",
+    [
+        ("notes.xyz", "application/octet-stream", models.ItemUploadStateChoices.READY),
+        ("photo.png", "image/png", models.ItemUploadStateChoices.READY),
+        ("report.docx", "application/octet-stream", models.ItemUploadStateChoices.ANALYZING),
+    ],
+)
+def test_is_thumbnail_pending_not_for_unrendered_items(settings, filename, mimetype, upload_state):
+    """Formats no client renders, browser images and files not ready are never pending."""
+    _configure_wopi(
+        settings,
+        {"collabora": {"ThumbnailServiceUrl": "http://collabora"}},
+        renderable={"collabora": {"extensions": {"docx", "png"}, "mimetypes": set()}},
+    )
+    item = _file(filename)
+    item.mimetype = mimetype
+    item.upload_state = upload_state
+
+    assert thumbnails.is_thumbnail_pending(item, cache.get(WOPI_CONFIGURATION_CACHE_KEY)) is False
+
+
+def test_is_thumbnail_pending_skips_unknown_formats_without_refresh(settings):
+    """A client whose formats are unknown is skipped, with no configuration refresh."""
+    _configure_wopi(settings, {"collabora": {"ThumbnailServiceUrl": "http://collabora"}})
+    configuration = cache.get(WOPI_CONFIGURATION_CACHE_KEY)
+    del configuration["collabora"]
+
+    with mock.patch("wopi.conversion.thumbnails.configure_wopi_clients") as configure:
+        assert thumbnails.is_thumbnail_pending(_file(), configuration) is False
+
+    configure.delay.assert_not_called()
+
+
+def test_is_thumbnail_pending_requires_opt_in(settings):
+    """Without a client defining a ThumbnailServiceUrl, nothing is pending."""
+    _configure_wopi(settings, {"collabora": {}})
+
+    assert (
+        thumbnails.is_thumbnail_pending(_file(), cache.get(WOPI_CONFIGURATION_CACHE_KEY)) is False
+    )
+
+
 def test_generate_thumbnail_stores_resized_png(settings):
     """Store the rendered first page resized to WOPI_THUMBNAIL_SIZE and record when."""
     settings.WOPI_THUMBNAIL_SIZE = 64

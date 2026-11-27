@@ -2632,6 +2632,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "readOnly": true,
@@ -2711,6 +2716,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3060,6 +3066,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3140,6 +3151,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3299,6 +3311,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3374,6 +3391,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",
@@ -3781,6 +3799,11 @@
                         "type": "string",
                         "readOnly": true
                     },
+                    "thumbnail_pending": {
+                        "type": "boolean",
+                        "description": "Return whether a thumbnail is still to be rendered for the item.",
+                        "readOnly": true
+                    },
                     "filename": {
                         "type": "string",
                         "nullable": true,
@@ -3869,6 +3892,7 @@
                     "size",
                     "source",
                     "target",
+                    "thumbnail_pending",
                     "title",
                     "type",
                     "updated_at",

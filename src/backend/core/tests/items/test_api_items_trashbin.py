@@ -100,6 +100,7 @@ def test_api_items_trashbin_format(settings):
         else None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,

@@ -64,6 +64,7 @@ def test_api_items_retrieve_anonymous_public_standalone():
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -128,6 +129,7 @@ def test_api_items_retrieve_anonymous_public_parent():
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -239,6 +241,7 @@ def test_api_items_retrieve_authenticated_unrelated_public_or_authenticated(reac
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -309,6 +312,7 @@ def test_api_items_retrieve_authenticated_public_or_authenticated_parent(reach):
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -457,6 +461,7 @@ def test_api_items_retrieve_authenticated_related_direct():
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -531,6 +536,7 @@ def test_api_items_retrieve_authenticated_related_parent():
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -715,6 +721,7 @@ def test_api_items_retrieve_authenticated_related_team_members(teams, role, mock
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -797,6 +804,7 @@ def test_api_items_retrieve_authenticated_related_team_administrators(teams, rol
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -879,6 +887,7 @@ def test_api_items_retrieve_authenticated_related_team_owners(teams, mock_user_t
         "url_permalink": None,
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": None,
         "main_workspace": False,
         "filename": item.filename,
@@ -1305,6 +1314,7 @@ def test_api_items_retrieve_file_with_url_property(upload_state):
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1385,6 +1395,7 @@ def test_api_items_retrieve_file_with_url_property_non_previewable(upload_state)
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": None,
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": "application/vnd.oasis.opendocument.text",
         "main_workspace": False,
         "filename": item.filename,
@@ -1457,6 +1468,7 @@ def test_api_items_retrieve_file_with_url_property_with_spaces():
             f"http://localhost:8083/media/preview/item/{item.id!s}/logo%20with%20spaces.png"
         ),
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1610,6 +1622,7 @@ def test_api_items_retrieve_file_analysing_not_creator():
         "url_permalink": f"http://testserver/api/v1.0/items/{item.id!s}/download/",
         "url_preview": f"http://localhost:8083/media/preview/item/{item.id!s}/logo.png",
         "url_thumbnail": None,
+        "thumbnail_pending": False,
         "mimetype": "image/png",
         "main_workspace": False,
         "filename": item.filename,
@@ -1769,3 +1782,37 @@ def test_api_items_retrieve_url_thumbnail(upload_state, thumbnail_updated_at, ex
 
     assert response.status_code == 200
     assert response.json()["url_thumbnail"] == (expected and expected.format(id=item.id))
+
+
+def test_api_items_retrieve_thumbnail_pending(settings):
+    """A ready file a WOPI client renders is pending until its thumbnail is rendered."""
+    settings.WOPI_CLIENTS = ["collabora"]
+    settings.WOPI_CLIENTS_CONFIGURATION = {
+        "collabora": {"options": {"ThumbnailServiceUrl": "http://collabora"}}
+    }
+    cache.set(
+        WOPI_CONFIGURATION_CACHE_KEY,
+        {
+            "mimetypes": {},
+            "extensions": {},
+            "collabora": {
+                "proof_keys": {},
+                "renderable": {"extensions": {"docx"}, "mimetypes": set()},
+            },
+        },
+    )
+    item = factories.ItemFactory(
+        type=models.ItemTypeChoices.FILE,
+        link_reach="public",
+        filename="report.docx",
+        update_upload_state=models.ItemUploadStateChoices.READY,
+    )
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.json()["thumbnail_pending"] is True
+
+    item.thumbnail_updated_at = datetime(2026, 10, 3, 12, tzinfo=UTC)
+    item.save(update_fields=["thumbnail_updated_at"])
+
+    response = APIClient().get(f"/api/v1.0/items/{item.id!s}/")
+    assert response.json()["thumbnail_pending"] is False

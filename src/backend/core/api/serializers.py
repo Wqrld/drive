@@ -22,6 +22,7 @@ from core.api import utils
 from core.api.fields import SchemaField
 from core.storage import get_storage_compute_backend
 from wopi import utils as wopi_utils
+from wopi.conversion.thumbnails import is_thumbnail_pending
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +277,7 @@ class ListItemSerializer(serializers.ModelSerializer):
     url_permalink = serializers.SerializerMethodField()
     url_preview = serializers.SerializerMethodField()
     url_thumbnail = serializers.SerializerMethodField()
+    thumbnail_pending = serializers.SerializerMethodField()
     creator = UserLightSerializer(read_only=True)
     hard_delete_at = serializers.SerializerMethodField(read_only=True)
     is_wopi_supported = serializers.SerializerMethodField()
@@ -315,6 +317,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "filename",
             "mimetype",
             "main_workspace",
@@ -353,6 +356,7 @@ class ListItemSerializer(serializers.ModelSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "mimetype",
             "main_workspace",
             "size",
@@ -441,6 +445,10 @@ class ListItemSerializer(serializers.ModelSerializer):
             return None
         return f"{settings.MEDIA_BASE_URL}{settings.MEDIA_URL_PREVIEW}{item.thumbnail_key}"
 
+    def get_thumbnail_pending(self, item) -> bool:
+        """Return whether a thumbnail is still to be rendered for the item."""
+        return is_thumbnail_pending(item, self._get_wopi_configuration())
+
     def get_hard_delete_at(self, item):
         """Return the hard delete date of the item."""
         if item.deleted_at is None:
@@ -505,6 +513,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "filename",
             "mimetype",
             "main_workspace",
@@ -538,6 +547,7 @@ class ListItemLightSerializer(ListItemSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "mimetype",
             "main_workspace",
             "size",
@@ -596,6 +606,7 @@ class ItemSerializer(ListItemSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "filename",
             "mimetype",
             "main_workspace",
@@ -633,6 +644,7 @@ class ItemSerializer(ListItemSerializer):
             "url_permalink",
             "url_preview",
             "url_thumbnail",
+            "thumbnail_pending",
             "filename",
             "mimetype",
             "main_workspace",
